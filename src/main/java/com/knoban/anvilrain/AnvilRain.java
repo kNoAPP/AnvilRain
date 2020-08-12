@@ -43,7 +43,8 @@ public class AnvilRain extends JavaPlugin implements Listener {
         long tStart = System.currentTimeMillis();
         super.onDisable();
 
-        // On disable crap goes here
+        manager.remove();
+        manager = null;
 
         long tEnd = System.currentTimeMillis();
         getLogger().info("Successfully Disabled! (" + (tEnd - tStart) + " ms)");
@@ -55,7 +56,7 @@ public class AnvilRain extends JavaPlugin implements Listener {
         sender.sendMessage("§7---------------------------");
         sender.sendMessage("   §e/anvil toggle §f- Toggle anvil rain");
         sender.sendMessage("   §e/anvil toggle <player> §f- Toggle a player");
-        sender.sendMessage("   §e/anvil set <tradius> <tdensity> <secs> §f- Set progression.");
+        sender.sendMessage("   §e/anvil set <tradius> <tdensity> <tpower> <secs> §f- Progression.");
     }
 
     @AtlasCommand(paths = "anvil toggle")
@@ -86,12 +87,14 @@ public class AnvilRain extends JavaPlugin implements Listener {
 
     @AtlasCommand(paths = "anvil set")
     public void cmdAnvilToggle(CommandSender sender,
-                               @AtlasParam(filter = "range:0to100") int tRadius,
-                               @AtlasParam(filter = "range:0.0to1.0") float tDensity,
-                               @AtlasParam(filter = "min:0")long secs) {
-        manager.setTimer(secs*1000);
+                               @AtlasParam(filter = "range:0to100", suggestions = {"# - radius"}) int tRadius,
+                               @AtlasParam(filter = "range:0.0to1.0", suggestions = {"# - density"}) float tDensity,
+                               @AtlasParam(filter = "range:0to255", suggestions = {"# - power"}) int tPower,
+                               @AtlasParam(filter = "min:0", suggestions = {"# - seconds"})long secs) {
         manager.setTargetRadius(tRadius);
         manager.setTargetDensity(tDensity);
+        manager.setTargetPower(tPower);
+        manager.setTimer(secs*1000);
 
         sender.sendMessage("§aYour changes have been applied!");
     }

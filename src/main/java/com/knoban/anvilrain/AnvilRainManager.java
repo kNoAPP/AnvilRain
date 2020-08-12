@@ -1,20 +1,21 @@
 package com.knoban.anvilrain;
 
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.event.entity.EntityDamageByBlockEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
@@ -26,12 +27,10 @@ public class AnvilRainManager implements Listener {
     private final AnvilRain plugin;
 
     private boolean enabled;
-    private int startRadius, currentRadius, targetRadius;
+    private int startRadius, currentRadius, targetRadius, startPower, currentPower, targetPower;
     private float startDensity, currentDensity, targetDensity;
     private long startTime, endTime;
     private Collection<UUID> targets;
-
-    private Collection<FallingBlock> fallingAnvils;
 
     private BukkitTask task;
 
@@ -42,11 +41,11 @@ public class AnvilRainManager implements Listener {
         enabled = false;
         startRadius = currentRadius = targetRadius = 0;
         startDensity = currentDensity = targetDensity = 0;
+        startPower = currentPower = targetPower = 0;
 
         startTime = endTime = System.currentTimeMillis();
 
         targets = new HashSet<>();
-        fallingAnvils = new HashSet<>();
     }
 
     public void remove() {
@@ -70,24 +69,30 @@ public class AnvilRainManager implements Listener {
         }
     }
 
+    private static final String METADATA = "falling-anvil";
     private void anvilLoop() {
         float prctTimeElapsed = isComplete() ? 1.0f : getPercentElapsedTime();
         currentRadius = startRadius + (int)((float)(targetRadius - startRadius) * prctTimeElapsed);
         currentDensity = startDensity + ((targetDensity - startDensity) * prctTimeElapsed);
+        currentPower = startPower + (int)((float)(targetPower - startPower) * prctTimeElapsed);
 
         for(Player p : Bukkit.getOnlinePlayers()) {
-            if(targets.contains(p.getUniqueId()) && p.getGameMode() == GameMode.SURVIVAL) {
+            if(targets.contains(p.getUniqueId()) && p.getGameMode() != GameMode.SPECTATOR) {
                 int bx = p.getLocation().getBlockX();
+                int by = p.getLocation().getBlockY() + 40;
                 int bz = p.getLocation().getBlockZ();
                 for(int x=-currentRadius; x<currentRadius; x++) {
                     for(int z=-currentRadius; z<currentRadius; z++) {
                         if(RANDOM.nextFloat() < currentDensity) {
-                            Location spawnLoc = new Location(p.getWorld(), bx + x, 255, bz + z);
+                            Location spawnLoc = new Location(p.getWorld(),
+                                    bx + x + 0.5,
+                                    Math.max(p.getWorld().getHighestBlockYAt(bx + x, bz + z) + 2, by),
+                                    bz + z + 0.5);
                             Block block = p.getWorld().getBlockAt(spawnLoc);
                             block.setType(Material.AIR);
 
                             FallingBlock anvil = p.getWorld().spawnFallingBlock(spawnLoc, Material.ANVIL.createBlockData());
-                            fallingAnvils.add(anvil);
+                            anvil.setMetadata(METADATA, new FixedMetadataValue(plugin, true));
                         }
                     }
                 }
@@ -95,21 +100,63 @@ public class AnvilRainManager implements Listener {
         }
     }
 
-    private static final EnumSet<Material> STRONG_BLOCKS = EnumSet.of(
-            Material.OBSIDIAN, Material.BEDROCK
-    );
-
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onAnvilLand(EntityChangeBlockEvent e) {
         Entity entity = e.getEntity();
-        if(fallingAnvils.contains(entity)) {
+        if(entity.hasMetadata(METADATA)) {
             Block block = e.getBlock();
-            Block beneath = block.getRelative(BlockFace.DOWN);
-            if(!STRONG_BLOCKS.contains(beneath.getType())) {
-                beneath.breakNaturally(new ItemStack(Material.AIR));
-                e.setCancelled(true);
-            } else
-                fallingAnvils.remove(entity);
+            blockBreakLoop(block, 0);
+
+            for(Entity nearby : entity.getNearbyEntities(0.25, 0.25, 0.25)) {
+                if(nearby instanceof Player) {
+                    Player t = (Player) nearby;
+                    t.damage(10, entity);
+                    t.setLastDamageCause(new EntityDamageByBlockEvent(block, t, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
+                    continue;
+                }
+                if(nearby instanceof LivingEntity || nearby.hasMetadata(METADATA))
+                    continue;
+                nearby.remove();
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onAnvilLand(EntityRemoveFromWorldEvent e) {
+        Entity entity = e.getEntity();
+        if(entity.hasMetadata(METADATA)) {
+            Block block = entity.getLocation().getBlock();
+            blockBreakLoop(block, 0);
+
+            for(Entity nearby : entity.getNearbyEntities(0.25, 0.25, 0.25)) {
+                if(nearby instanceof Player) {
+                    Player t = (Player) nearby;
+                    t.damage(10, entity);
+                    t.setLastDamageCause(new EntityDamageByBlockEvent(block, t, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
+                    continue;
+                }
+                if(nearby instanceof LivingEntity || nearby.hasMetadata(METADATA))
+                    continue;
+                nearby.remove();
+            }
+        }
+    }
+
+    private static final EnumSet<Material> STRONG_BLOCKS = EnumSet.of(
+            Material.OBSIDIAN, Material.BEDROCK, Material.END_PORTAL_FRAME
+    );
+    private void blockBreakLoop(Block block, int i) {
+        if(STRONG_BLOCKS.contains(block.getType()) || block.getY() <= 0) {
+            block.getWorld().playSound(block.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.3F, 1F);
+            return;
+        }
+
+        block.getWorld().playEffect(block.getLocation(), Effect.STEP_SOUND, block.getType());
+        block.setType(Material.AIR);
+
+        if(++i < currentPower) {
+            final int nextI = i;
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> blockBreakLoop(block.getRelative(BlockFace.DOWN), nextI), 1L);
         }
     }
 
@@ -121,14 +168,6 @@ public class AnvilRainManager implements Listener {
         return (float)(System.currentTimeMillis() - startTime) / (float)(endTime - startTime);
     }
 
-    public long getEndTime() {
-        return endTime;
-    }
-
-    public long getStartTime() {
-        return startTime;
-    }
-
     public void setTimer(long millis) {
         if(millis <= 0)
             millis = 1;
@@ -137,17 +176,9 @@ public class AnvilRainManager implements Listener {
         endTime = startTime + millis;
     }
 
-    public int getTargetRadius() {
-        return targetRadius;
-    }
-
     public void setTargetRadius(int targetRadius) {
         this.startRadius = currentRadius;
         this.targetRadius = targetRadius;
-    }
-
-    public float getTargetDensity() {
-        return targetDensity;
     }
 
     public void setTargetDensity(float targetDensity) {
@@ -155,12 +186,9 @@ public class AnvilRainManager implements Listener {
         this.targetDensity = targetDensity;
     }
 
-    public int getCurrentRadius() {
-        return currentRadius;
-    }
-
-    public float getCurrentDensity() {
-        return currentDensity;
+    public void setTargetPower(int targetPower) {
+        this.startPower = currentPower;
+        this.targetPower = targetPower;
     }
 
     public Collection<UUID> getTargets() {
