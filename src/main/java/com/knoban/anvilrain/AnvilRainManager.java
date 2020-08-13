@@ -1,6 +1,7 @@
 package com.knoban.anvilrain;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
+import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import com.knoban.atlas.utils.Tools;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -16,6 +17,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +31,7 @@ public class AnvilRainManager implements Listener {
 
     private final AnvilRain plugin;
 
-    private boolean enabled;
+    private boolean enabled, flipTargets;
     private int startRadius, currentRadius, targetRadius, startPower, currentPower, targetPower;
     private float startDensity, currentDensity, targetDensity;
     private long startTime, endTime;
@@ -41,6 +44,7 @@ public class AnvilRainManager implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         enabled = false;
+        flipTargets = false;
         startRadius = currentRadius = targetRadius = 0;
         startDensity = currentDensity = targetDensity = 0;
         startPower = currentPower = targetPower = 0;
@@ -71,6 +75,14 @@ public class AnvilRainManager implements Listener {
         }
     }
 
+    public boolean isFlippingTargets() {
+        return flipTargets;
+    }
+
+    public void setFlipTargets(boolean flipTargets) {
+        this.flipTargets = flipTargets;
+    }
+
     private static final String METADATA = "falling-anvil";
     private void anvilLoop() {
         float prctTimeElapsed = isComplete() ? 1.0f : getPercentElapsedTime();
@@ -79,10 +91,10 @@ public class AnvilRainManager implements Listener {
         currentPower = startPower + (int)((float)(targetPower - startPower) * prctTimeElapsed);
 
         for(Player p : Bukkit.getOnlinePlayers()) {
-            if(targets.contains(p.getUniqueId()) && p.getGameMode() != GameMode.SPECTATOR) {
-                p.sendActionBar("§f[ " + Tools.generateWaitBar(prctTimeElapsed, 60,
+            if(targets.contains(p.getUniqueId()) == !flipTargets && p.getGameMode() != GameMode.SPECTATOR) {
+                p.sendActionBar("§4Difficulty §f- [ " + Tools.generateWaitBar(prctTimeElapsed, 50,
                         ChatColor.YELLOW, '|',
-                        ChatColor.GRAY, '|') + " §f] - §6" + String.format("%.2f", prctTimeElapsed * 100) + "%");
+                        ChatColor.GRAY, '|') + " §f] - §6" + String.format("%.3f", prctTimeElapsed * 100) + "%");
                 int bx = p.getLocation().getBlockX();
                 int by = p.getLocation().getBlockY() + 40;
                 int bz = p.getLocation().getBlockZ();
@@ -143,6 +155,32 @@ public class AnvilRainManager implements Listener {
                 nearby.remove();
             }
         }
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent e) {
+        Player p = e.getPlayer();
+        if(!p.hasPlayedBefore()) {
+            int x = RANDOM.nextInt(2000) - 1000;
+            int z = RANDOM.nextInt(2000) - 1000;
+            int y = p.getWorld().getHighestBlockYAt(x, z);
+
+            p.sendMessage("§7You have been teleported to a random location.");
+            p.teleport(new Location(p.getWorld(), x, y + 2, z));
+        }
+    }
+
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent e) {
+        Player p = e.getPlayer();
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            int x = RANDOM.nextInt(2000) - 1000;
+            int z = RANDOM.nextInt(2000) - 1000;
+            int y = p.getWorld().getHighestBlockYAt(x, z);
+
+            p.sendMessage("§7You have been teleported to a random location.");
+            p.teleport(new Location(p.getWorld(), x, y + 2, z));
+        }, 2L);
     }
 
     private static final EnumSet<Material> STRONG_BLOCKS = EnumSet.of(

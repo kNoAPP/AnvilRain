@@ -6,9 +6,13 @@ import com.knoban.atlas.commandsII.annotations.AtlasParam;
 import com.knoban.atlas.data.local.DataHandler;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+// Recommended settings:
+// /anvil toggle
+// /anvil flip
+// /anvil set 10 0.0001 1 0
+// /anvil set 15 0.004 4 604800
 public class AnvilRain extends JavaPlugin {
 
     private static AnvilRain instance;
@@ -53,36 +57,50 @@ public class AnvilRain extends JavaPlugin {
         sender.sendMessage("§7---------------------------");
         sender.sendMessage("   §e/anvil toggle §f- Toggle anvil rain");
         sender.sendMessage("   §e/anvil toggle <player> §f- Toggle a player");
+        sender.sendMessage("   §e/anvil flip §f- Flip player toggle between whitelist/blacklist.");
         sender.sendMessage("   §e/anvil set <tradius> <tdensity> <tpower> <secs> §f- Progression.");
     }
 
-    @AtlasCommand(paths = "anvil toggle")
+    @AtlasCommand(paths = "anvil toggle", permission = "op")
     public void cmdAnvilToggle(CommandSender sender) {
         boolean enabled = !manager.isEnabled();
         manager.setEnabled(enabled);
 
         if(enabled) {
-            sender.sendMessage("§aAnvil Rain is now enabled. Add/remove players with:");
-            sender.sendMessage("   §d/anvil toggle <player>");
+            sender.sendMessage("§aAnvil Rain is now enabled.");
         } else {
             sender.sendMessage("§cAnvil Rain is now disabled.");
         }
     }
 
-    @AtlasCommand(paths = "anvil toggle")
+    @AtlasCommand(paths = "anvil toggle", permission = "op")
     public void cmdAnvilToggle(CommandSender sender, Player target) {
         boolean enabled = !manager.getTargets().contains(target.getUniqueId());
 
         if(enabled) {
             manager.getTargets().add(target.getUniqueId());
-            sender.sendMessage("§2" + target.getName() + " §ahas been added to the game!");
+            sender.sendMessage("§2" + target.getName() + " §ahas been added!");
         } else {
             manager.getTargets().remove(target.getUniqueId());
-            sender.sendMessage("§4" + target.getName() + " §chas been removed from the game!");
+            sender.sendMessage("§4" + target.getName() + " §chas been removed!");
         }
     }
 
-    @AtlasCommand(paths = "anvil set")
+    @AtlasCommand(paths = "anvil flip", permission = "op")
+    public void cmdAnvilFlipToggle(CommandSender sender) {
+        boolean enabled = !manager.isFlippingTargets();
+        manager.setFlipTargets(enabled);
+
+        if(enabled) {
+            sender.sendMessage("§aAnvil Rain is now using a blacklist. Add/remove players with:");
+            sender.sendMessage("   §d/anvil toggle <player>");
+        } else {
+            sender.sendMessage("§aAnvil Rain is now using a whitelist. Add/remove players with:");
+            sender.sendMessage("   §d/anvil toggle <player>");
+        }
+    }
+
+    @AtlasCommand(paths = "anvil set", permission = "op")
     public void cmdAnvilToggle(CommandSender sender,
                                @AtlasParam(filter = "range:0to100", suggestions = {"# - radius"}) int tRadius,
                                @AtlasParam(filter = "range:0.0to1.0", suggestions = {"# - density"}) float tDensity,
