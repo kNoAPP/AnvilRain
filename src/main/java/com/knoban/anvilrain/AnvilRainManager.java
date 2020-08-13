@@ -107,14 +107,14 @@ public class AnvilRainManager implements Listener {
             Block block = e.getBlock();
             blockBreakLoop(block, 0);
 
-            for(Entity nearby : entity.getNearbyEntities(0.25, 0.25, 0.25)) {
-                if(nearby instanceof Player) {
-                    Player t = (Player) nearby;
-                    t.damage(10, entity);
-                    t.setLastDamageCause(new EntityDamageByBlockEvent(block, t, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
+            for(Entity nearby : entity.getNearbyEntities(0.2, 0.2, 0.2)) {
+                if(nearby instanceof LivingEntity) {
+                    LivingEntity le = (LivingEntity) nearby;
+                    le.damage(10, entity);
+                    le.setLastDamageCause(new EntityDamageByBlockEvent(block, le, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
                     continue;
                 }
-                if(nearby instanceof LivingEntity || nearby.hasMetadata(METADATA))
+                if(nearby.hasMetadata(METADATA))
                     continue;
                 nearby.remove();
             }
@@ -128,14 +128,14 @@ public class AnvilRainManager implements Listener {
             Block block = entity.getLocation().getBlock();
             blockBreakLoop(block, 0);
 
-            for(Entity nearby : entity.getNearbyEntities(0.25, 0.25, 0.25)) {
-                if(nearby instanceof Player) {
-                    Player t = (Player) nearby;
-                    t.damage(10, entity);
-                    t.setLastDamageCause(new EntityDamageByBlockEvent(block, t, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
+            for(Entity nearby : entity.getNearbyEntities(0.2, 0.2, 0.2)) {
+                if(nearby instanceof LivingEntity) {
+                    LivingEntity le = (LivingEntity) nearby;
+                    le.damage(10, entity);
+                    le.setLastDamageCause(new EntityDamageByBlockEvent(block, le, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
                     continue;
                 }
-                if(nearby instanceof LivingEntity || nearby.hasMetadata(METADATA))
+                if(nearby.hasMetadata(METADATA))
                     continue;
                 nearby.remove();
             }
