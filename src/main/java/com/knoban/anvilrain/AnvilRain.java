@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class AnvilRain extends JavaPlugin implements Listener {
+public class AnvilRain extends JavaPlugin {
 
     private static AnvilRain instance;
 
@@ -24,9 +24,6 @@ public class AnvilRain extends JavaPlugin implements Listener {
 
         // Register configuration file.
         config = new DataHandler.YML(this, "/config.yml");
-
-        // Register event listeners.
-        getServer().getPluginManager().registerEvents(this, this);
 
         // Register ACv2 commands
         ACAPI.getApi().registerCommandsFromClass(this, AnvilRain.class, this);
@@ -97,17 +94,5 @@ public class AnvilRain extends JavaPlugin implements Listener {
         manager.setTimer(secs*1000);
 
         sender.sendMessage("§aYour changes have been applied!");
-    }
-
-    public static AnvilRain getInstance() {
-        return instance;
-    }
-
-    public AnvilRainManager getManager() {
-        return manager;
-    }
-
-    public DataHandler.YML getFileConfig() {
-        return config;
     }
 }

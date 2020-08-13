@@ -1,6 +1,7 @@
 package com.knoban.anvilrain;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
+import com.knoban.atlas.utils.Tools;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -17,6 +18,7 @@ import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -34,7 +36,7 @@ public class AnvilRainManager implements Listener {
 
     private BukkitTask task;
 
-    public AnvilRainManager(final AnvilRain plugin) {
+    public AnvilRainManager(@NotNull final AnvilRain plugin) {
         this.plugin = plugin;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
@@ -78,6 +80,9 @@ public class AnvilRainManager implements Listener {
 
         for(Player p : Bukkit.getOnlinePlayers()) {
             if(targets.contains(p.getUniqueId()) && p.getGameMode() != GameMode.SPECTATOR) {
+                p.sendActionBar("§f[ " + Tools.generateWaitBar(prctTimeElapsed, 60,
+                        ChatColor.YELLOW, '|',
+                        ChatColor.GRAY, '|') + " §f] - §6" + String.format("%.2f", prctTimeElapsed * 100) + "%");
                 int bx = p.getLocation().getBlockX();
                 int by = p.getLocation().getBlockY() + 40;
                 int bz = p.getLocation().getBlockZ();
@@ -111,7 +116,6 @@ public class AnvilRainManager implements Listener {
                 if(nearby instanceof LivingEntity) {
                     LivingEntity le = (LivingEntity) nearby;
                     le.damage(10, entity);
-                    le.setLastDamageCause(new EntityDamageByBlockEvent(block, le, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
                     continue;
                 }
                 if(nearby.hasMetadata(METADATA))
@@ -132,7 +136,6 @@ public class AnvilRainManager implements Listener {
                 if(nearby instanceof LivingEntity) {
                     LivingEntity le = (LivingEntity) nearby;
                     le.damage(10, entity);
-                    le.setLastDamageCause(new EntityDamageByBlockEvent(block, le, EntityDamageEvent.DamageCause.FALLING_BLOCK, 10));
                     continue;
                 }
                 if(nearby.hasMetadata(METADATA))
@@ -145,7 +148,7 @@ public class AnvilRainManager implements Listener {
     private static final EnumSet<Material> STRONG_BLOCKS = EnumSet.of(
             Material.OBSIDIAN, Material.BEDROCK, Material.END_PORTAL_FRAME
     );
-    private void blockBreakLoop(Block block, int i) {
+    private void blockBreakLoop(@NotNull Block block, int i) {
         if(STRONG_BLOCKS.contains(block.getType()) || block.getY() <= 0) {
             block.getWorld().playSound(block.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.3F, 1F);
             return;
